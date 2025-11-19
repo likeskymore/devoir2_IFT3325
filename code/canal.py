@@ -2,7 +2,7 @@ import random, time, threading
 from queue import Queue, Empty
 
 class Channel:
-    def __init__(self, probErreur=0.05, probPerte=0.10, delaiMax=200):
+    def __init__(self, probErreur, probPerte, delaiMax):
         self.probErreur = probErreur
         self.probPerte = probPerte
         self.delaiMax = delaiMax
@@ -26,9 +26,9 @@ class Channel:
             delay = random.uniform(0, self.delaiMax) / 1000.0
             time.sleep(delay)
 
-            frame2 = self._maybe_corrupt(frame)
+            frame = self._maybe_corrupt(frame)
             try:
-                callback(frame2)
+                callback(frame)
             except Exception as e:
                 print("Channel callback error:", e)
 
