@@ -2,7 +2,7 @@ import random, time, threading
 from queue import Queue, Empty
 
 class Channel:
-    def __init__(self, probErreur, probPerte, delaiMax):
+    def __init__(self, probErreur, probPerte, delaiMax = 0):
         self.probErreur = probErreur
         self.probPerte = probPerte
         self.delaiMax = delaiMax

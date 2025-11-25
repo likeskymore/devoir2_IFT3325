@@ -51,7 +51,7 @@ def parse_frame(frame_bytes: bytes):
     data = payload[8:]
     return int(header, 2), data
 
-def run_gbn(message: str, channel: Channel, timeout_ms=250, window_size=4):
+def run_gbn(message: str, channel: Channel, timeout_ms=200, window_size=4, max_retries=10):
     stats = {"sent": 0, "retransmitted": 0, "acks": 0, "received": 0}
 
     frames = []
@@ -69,6 +69,7 @@ def run_gbn(message: str, channel: Channel, timeout_ms=250, window_size=4):
     lock = threading.Lock()
     ack_event = threading.Event()
     last_ack_received = -1  
+    retry_counts = [0] * total_frames
 
     start_time = time.time()
 
@@ -105,9 +106,14 @@ def run_gbn(message: str, channel: Channel, timeout_ms=250, window_size=4):
             continue
 
         log(f"Timeout! Retransmitting window starting at {base}")
-        stats["retransmitted"] += (next_seq - base)
         for seqnum in range(base, next_seq):
-            log(f"Resending frame {seqnum}")
+            retry_counts[seqnum] += 1
+            if retry_counts[seqnum] > max_retries:
+                log(f"Max retries reached for frame {seqnum}, skipping it")
+                base += 1  # Move the window forward
+                continue
+            log(f"Resending frame {seqnum} (retry {retry_counts[seqnum]})")
+            stats["retransmitted"] += 1
             stats["sent"] += 1
             channel.send(frames[seqnum], receiver_callback)
 
@@ -123,7 +129,7 @@ if __name__ == "__main__":
     with open("message.txt", "r", encoding="ascii") as f:
         msg = f.read()
 
-    channel = Channel(probErreur=0.5, probPerte=0, delaiMax=200)
+    channel = Channel(probErreur=0, probPerte=0.7,delaiMax=0)
 
-    run_gbn(msg, channel, timeout_ms=250, window_size=4)
+    run_gbn(msg, channel, timeout_ms=200, window_size=4)
     channel.stop()
