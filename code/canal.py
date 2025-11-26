@@ -1,19 +1,25 @@
 import random, time, threading
 from queue import Queue, Empty
 
+# Cette classe simule un canal de communication avec des erreurs et des pertes de trames
+
+
 class Channel:
-    def __init__(self, probErreur, probPerte, delaiMax = 0):
+    def __init__(self, probErreur, probPerte, delaiMax=0):
         self.probErreur = probErreur
         self.probPerte = probPerte
         self.delaiMax = delaiMax
+        # Queue pour gérer les trames à envoyer
         self.queue = Queue()
         self._stop = threading.Event()
         self.worker = threading.Thread(target=self._run, daemon=True)
         self.worker.start()
 
+    # Méthode pour envoyer une trame à travers le canal
     def send(self, frame, deliver_callback):
         self.queue.put((frame, deliver_callback))
 
+    # Méthode interne pour gérer l'envoi des trames avec délai, perte et corruption
     def _run(self):
         while not self._stop.is_set():
             try:
@@ -32,6 +38,7 @@ class Channel:
             except Exception as e:
                 print("Channel callback error:", e)
 
+    # Méthode interne pour éventuellement corrompre une trame
     def _maybe_corrupt(self, frame):
         if random.random() > self.probErreur:
             return frame
@@ -45,6 +52,7 @@ class Channel:
         data[byte_i] ^= bit_i
         return bytes(data)
 
+    # Méthode pour arrêter le canal proprement
     def stop(self):
         self._stop.set()
         self.worker.join()
