@@ -59,10 +59,10 @@ def parse_frame(frame_bytes: bytes):
     payload = destuffed[:-16]
     recv_crc = destuffed[-16:]
     calc_crc = crc16(payload)
-    if recv_crc != calc_crc:
-        raise ValueError("CRC error detected")
     header = payload[:8]
     data = payload[8:]
+    if recv_crc != calc_crc:
+        raise ValueError(f"CRC error detected for frame {int(header,2)}")
     return int(header, 2), data
 
 
@@ -100,7 +100,8 @@ def run_gbn(
         stats["received"] += 1
         try:
             seqnum, _ = parse_frame(frame_bytes)
-        except:
+        except ValueError as e:
+            log(e)
             return
 
         with lock:
@@ -151,7 +152,7 @@ if __name__ == "__main__":
     with open("message.txt", "r", encoding="ascii") as f:
         msg = f.read()
 
-    channel = Channel(probErreur=0, probPerte=0.7, delaiMax=0)
+    channel = Channel(probErreur=0.8, probPerte=0, delaiMax=0)
 
     run_gbn(msg, channel, timeout_ms=200, window_size=4)
     channel.stop()
